@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+* {
+  border-color: theme("colors.base.border");
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #0a0a0b;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(229, 57, 53, 0.10), transparent 40%),
+    radial-gradient(circle at 85% 20%, rgba(41, 121, 255, 0.08), transparent 45%);
+  color: #fafafa;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background-color: rgba(229, 57, 53, 0.35);
+  color: white;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a2e;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #38383d;
+}
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid #e53935;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.04] backdrop-blur-xl border border-white/[0.08];
+  }
+
+  .glass-card {
+    @apply glass rounded-2xl shadow-glass transition-all duration-300;
+  }
+
+  .glass-card:hover {
+    @apply bg-white/[0.06] border-white/[0.12];
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-red px-5 py-2.5
+      font-semibold text-white transition-all duration-200
+      hover:bg-brand-red-dark hover:shadow-glow active:scale-[0.98]
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 py-2.5
+      font-semibold text-base-white transition-all duration-200
+      hover:bg-white/[0.08] hover:border-white/20 active:scale-[0.98]
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium
+      text-gray-400 transition-colors hover:text-white hover:bg-white/[0.06];
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white
+      placeholder:text-gray-500 transition-all duration-200
+      focus:border-brand-red/60 focus:bg-white/[0.06] focus:outline-none;
+  }
+
+  .label-field {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-gray-400;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .badge-pendiente {
+    @apply badge bg-gray-500/15 text-gray-300;
+  }
+  .badge-proceso {
+    @apply badge bg-brand-blue/15 text-brand-blue-light;
+  }
+  .badge-completado {
+    @apply badge bg-emerald-500/15 text-emerald-400;
+  }
+
+  .stat-number {
+    @apply font-display text-4xl font-bold tracking-tight text-white;
+  }
+}

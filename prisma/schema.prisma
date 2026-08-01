@@ -1,0 +1,296 @@
+// ============================================================
+// Runners en Proceso — Esquema de base de datos (PostgreSQL)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------
+// Roles y usuarios
+// ------------------------------------------------------------
+
+enum RolNombre {
+  ADMINISTRADOR
+  ATLETA
+}
+
+model Rol {
+  id       String    @id @default(cuid())
+  nombre   RolNombre @unique
+  usuarios Usuario[]
+}
+
+enum EstadoUsuario {
+  ACTIVO
+  SUSPENDIDO
+}
+
+model Usuario {
+  id            String        @id @default(cuid())
+  username      String        @unique
+  correo        String?       @unique
+  passwordHash  String
+  estado        EstadoUsuario @default(ACTIVO)
+  rolId         String
+  rol           Rol           @relation(fields: [rolId], references: [id])
+  ultimaConexion DateTime?
+  creadoEn      DateTime      @default(now())
+  actualizadoEn DateTime      @updatedAt
+
+  atleta        Atleta?
+
+  entrenamientosCreados Entrenamiento[] @relation("EntrenamientosCreadosPor")
+  eventosCreados        Evento[]        @relation("EventosCreadosPor")
+
+  mensajesEnviados  Mensaje[]       @relation("MensajesEnviados")
+  mensajesRecibidos Mensaje[]       @relation("MensajesRecibidos")
+
+  notificaciones Notificacion[]
+  archivosSubidos Archivo[]      @relation("ArchivosSubidosPor")
+
+  @@index([rolId])
+}
+
+// ------------------------------------------------------------
+// Atletas
+// ------------------------------------------------------------
+
+enum Sexo {
+  MASCULINO
+  FEMENINO
+  OTRO
+}
+
+enum Nivel {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+  ELITE
+}
+
+model Atleta {
+  id                String   @id @default(cuid())
+  usuarioId         String   @unique
+  usuario           Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  nombre            String
+  apellidos         String
+  fotoUrl           String?
+  edad              Int?
+  sexo              Sexo?
+  pesoKg            Float?
+  estaturaCm        Float?
+  fechaNacimiento   DateTime?
+  telefono          String?
+  ciudad            String?
+  objetivoDeportivo String?
+  nivel             Nivel    @default(PRINCIPIANTE)
+  observacionesMedicas String?
+  contactoEmergenciaNombre    String?
+  contactoEmergenciaTelefono  String?
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  asignaciones  Asignacion[]
+  progreso      Progreso[]
+  estadisticas  Estadistica?
+
+  @@index([nivel])
+}
+
+// ------------------------------------------------------------
+// Entrenamientos y asignaciones
+// ------------------------------------------------------------
+
+model Entrenamiento {
+  id              String   @id @default(cuid())
+  titulo          String
+  descripcion     String?
+  objetivo        String?
+  fecha           DateTime
+  hora            String?
+  duracionMin     Int?
+  distanciaKm     Float?
+  ritmoObjetivo   String?
+  frecuenciaCardiaca String?
+  series          Int?
+  repeticiones    Int?
+  descansoSeg     Int?
+  indicaciones    String?
+  notasEntrenador String?
+
+  creadoPorId String
+  creadoPor   Usuario  @relation("EntrenamientosCreadosPor", fields: [creadoPorId], references: [id])
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  asignaciones Asignacion[]
+  archivos     Archivo[]
+
+  @@index([fecha])
+}
+
+enum EstadoAsignacion {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADO
+}
+
+model Asignacion {
+  id              String           @id @default(cuid())
+  entrenamientoId String
+  entrenamiento   Entrenamiento    @relation(fields: [entrenamientoId], references: [id], onDelete: Cascade)
+  atletaId        String
+  atleta          Atleta           @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+
+  estado          EstadoAsignacion @default(PENDIENTE)
+  comentarioAtleta String?
+  completadoEn    DateTime?
+
+  archivosEvidencia Archivo[]
+
+  creadoEn DateTime @default(now())
+
+  @@unique([entrenamientoId, atletaId])
+  @@index([atletaId])
+  @@index([estado])
+}
+
+// ------------------------------------------------------------
+// Progreso / estadísticas agregadas
+// ------------------------------------------------------------
+
+model Progreso {
+  id           String   @id @default(cuid())
+  atletaId     String
+  atleta       Atleta   @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+  fecha        DateTime
+  kilometros   Float    @default(0)
+  tiempoMin    Float    @default(0)
+  ritmoPromedio String?
+  asistio      Boolean  @default(true)
+
+  @@index([atletaId, fecha])
+}
+
+model Estadistica {
+  id                     String   @id @default(cuid())
+  atletaId               String   @unique
+  atleta                 Atleta   @relation(fields: [atletaId], references: [id], onDelete: Cascade)
+  kilometrosAcumulados   Float    @default(0)
+  horasEntrenadas        Float    @default(0)
+  entrenamientosRealizados Int    @default(0)
+  porcentajeCompletado   Float    @default(0)
+  objetivoSemanalKm      Float?
+  actualizadoEn          DateTime @updatedAt
+}
+
+// ------------------------------------------------------------
+// Eventos
+// ------------------------------------------------------------
+
+enum TipoEvento {
+  CARRERA
+  COMPETENCIA
+  ENTRENAMIENTO_GRUPAL
+  JUNTA
+}
+
+model Evento {
+  id          String     @id @default(cuid())
+  titulo      String
+  tipo        TipoEvento
+  fecha       DateTime
+  hora        String?
+  lugar       String?
+  latitud     Float?
+  longitud    Float?
+  descripcion String?
+
+  creadoPorId String
+  creadoPor   Usuario @relation("EventosCreadosPor", fields: [creadoPorId], references: [id])
+
+  creadoEn DateTime @default(now())
+
+  @@index([fecha])
+}
+
+// ------------------------------------------------------------
+// Mensajería
+// ------------------------------------------------------------
+
+model Mensaje {
+  id            String   @id @default(cuid())
+  emisorId      String
+  emisor        Usuario  @relation("MensajesEnviados", fields: [emisorId], references: [id])
+  receptorId    String
+  receptor      Usuario  @relation("MensajesRecibidos", fields: [receptorId], references: [id])
+  contenido     String
+  leido         Boolean  @default(false)
+  creadoEn      DateTime @default(now())
+
+  @@index([emisorId, receptorId])
+}
+
+// ------------------------------------------------------------
+// Notificaciones
+// ------------------------------------------------------------
+
+enum TipoNotificacion {
+  ENTRENAMIENTO_NUEVO
+  ENTRENAMIENTO_MODIFICADO
+  MENSAJE_NUEVO
+  EVENTO_NUEVO
+  SISTEMA
+}
+
+model Notificacion {
+  id        String           @id @default(cuid())
+  usuarioId String
+  usuario   Usuario          @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo      TipoNotificacion
+  titulo    String
+  mensaje   String
+  leida     Boolean          @default(false)
+  enlace    String?
+  creadoEn  DateTime         @default(now())
+
+  @@index([usuarioId, leida])
+}
+
+// ------------------------------------------------------------
+// Archivos (evidencias, PDFs, videos, imágenes adjuntas)
+// ------------------------------------------------------------
+
+enum TipoArchivo {
+  PDF
+  VIDEO
+  IMAGEN
+  LINK
+}
+
+model Archivo {
+  id              String       @id @default(cuid())
+  tipo            TipoArchivo
+  url             String
+  nombre          String?
+
+  entrenamientoId String?
+  entrenamiento   Entrenamiento? @relation(fields: [entrenamientoId], references: [id], onDelete: Cascade)
+
+  asignacionId    String?
+  asignacion      Asignacion?  @relation(fields: [asignacionId], references: [id], onDelete: Cascade)
+
+  subidoPorId     String
+  subidoPor       Usuario      @relation("ArchivosSubidosPor", fields: [subidoPorId], references: [id])
+
+  creadoEn        DateTime     @default(now())
+}
