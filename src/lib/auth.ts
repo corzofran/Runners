@@ -1,14 +1,19 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  // Fail loudly at build/runtime rather than silently signing with an empty key.
-  throw new Error(
-    "JWT_SECRET no está definido. Configúralo como variable de entorno antes de desplegar."
-  );
+// Nota: la validación se hace de forma diferida (dentro de getSecretKey), no al importar
+// el módulo. Next.js evalúa este archivo durante "Collecting page data" en el build de
+// Vercel; si la variable faltara y lanzáramos aquí arriba, tumbaría TODO el build en vez
+// de fallar solo cuando de verdad se intenta firmar/verificar un token.
+function getSecretKey(): Uint8Array {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  if (!JWT_SECRET) {
+    throw new Error(
+      "JWT_SECRET no está definido. Configúralo como variable de entorno antes de desplegar."
+    );
+  }
+  return new TextEncoder().encode(JWT_SECRET);
 }
-const secretKey = new TextEncoder().encode(JWT_SECRET);
 const EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 
 export type SessionPayload = {
@@ -32,12 +37,12 @@ export async function signSession(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(EXPIRES_IN)
-    .sign(secretKey);
+    .sign(getSecretKey());
 }
 
 export async function verifySession(token: string): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, secretKey);
+    const { payload } = await jwtVerify(token, getSecretKey());
     return payload as unknown as SessionPayload;
   } catch {
     return null;
