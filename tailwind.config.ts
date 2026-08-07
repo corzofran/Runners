@@ -65,6 +65,10 @@ const config: Config = {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "dialog-pop": {
+          "0%": { opacity: "0", transform: "translate(-50%, -50%) scale(0.96)" },
+          "100%": { opacity: "1", transform: "translate(-50%, -50%) scale(1)" },
+        },
         "pulse-ring": {
           "0%": { transform: "scale(0.9)", opacity: "0.6" },
           "100%": { transform: "scale(1.4)", opacity: "0" },
@@ -77,6 +81,7 @@ const config: Config = {
       animation: {
         "fade-up": "fade-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "fade-in": "fade-in 0.4s ease-out forwards",
+        "dialog-pop": "dialog-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "pulse-ring": "pulse-ring 1.8s cubic-bezier(0.2, 0.6, 0.4, 1) infinite",
         shimmer: "shimmer 2s infinite linear",
       },

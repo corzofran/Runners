@@ -23,8 +23,8 @@ export function DialogContent({
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm animate-fade-in" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[92vw] max-w-lg -translate-x-1/2 -translate-y-1/2",
-          "glass-card overflow-y-auto p-6 shadow-glass animate-fade-up",
+          "fixed left-1/2 top-1/2 z-50 max-h-[88vh] w-[92vw] max-w-lg",
+          "glass-card overflow-y-auto p-6 shadow-glass animate-dialog-pop",
           className
         )}
       >
