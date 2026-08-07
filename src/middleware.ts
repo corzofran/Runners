@@ -11,6 +11,7 @@ export async function middleware(req: NextRequest) {
     PUBLIC_PATHS.includes(pathname) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/registro") ||
     pathname.startsWith("/uploads");
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
