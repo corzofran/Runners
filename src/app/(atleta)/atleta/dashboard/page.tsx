@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAtleta } from "@/lib/session";
 import { Topbar } from "@/components/layout/topbar";
 import { Card, StatCard, EstadoBadge } from "@/components/ui/card";
-import { Route, Clock, Dumbbell, Target } from "lucide-react";
+import { Route, Clock, Dumbbell, Target, Flame, CalendarDays, TrendingUp } from "lucide-react";
 import { formatearFecha, formatearDistancia } from "@/lib/utils";
 import Link from "next/link";
 
@@ -42,16 +42,37 @@ export default async function AtletaDashboardPage() {
       <Topbar titulo={`Hola, ${atleta?.nombre} 👋`} subtitulo="Este es tu resumen de hoy" />
 
       <div className="space-y-6 p-6 lg:p-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard label="Completado" value={porcentaje} suffix="%" icon={Target} accent="red" />
+          <StatCard label="Racha actual" value={atleta?.estadisticas?.rachaActual ?? 0} suffix="días" icon={Flame} accent="red" />
           <StatCard
             label="Kilómetros acumulados"
             value={(atleta?.estadisticas?.kilometrosAcumulados ?? 0).toFixed(1)}
             icon={Route}
             accent="blue"
           />
-          <StatCard label="Horas entrenadas" value={(atleta?.estadisticas?.horasEntrenadas ?? 0).toFixed(1)} icon={Clock} accent="neutral" />
-          <StatCard label="Entrenamientos realizados" value={completados} icon={Dumbbell} accent="red" />
+          <StatCard label="Entrenamientos realizados" value={completados} icon={Dumbbell} accent="neutral" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Link
+            href="/atleta/calendario"
+            className="glass-card flex items-center gap-3 p-4 transition-colors hover:bg-white/[0.06]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-blue/10 text-brand-blue-light">
+              <CalendarDays className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-medium text-white">Ver calendario</span>
+          </Link>
+          <Link
+            href="/atleta/progreso"
+            className="glass-card flex items-center gap-3 p-4 transition-colors hover:bg-white/[0.06]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-red/10 text-brand-red-light">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-medium text-white">Ver progreso</span>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

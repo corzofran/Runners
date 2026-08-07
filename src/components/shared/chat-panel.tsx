@@ -1,18 +1,27 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Send } from "lucide-react";
+import { Send, Paperclip, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Conversacion = { usuarioId: string; nombre: string; noLeidos: number };
-type Mensaje = { id: string; emisorId: string; contenido: string; creadoEn: string };
+type Mensaje = {
+  id: string;
+  emisorId: string;
+  contenido: string;
+  archivoUrl?: string | null;
+  archivoTipo?: string | null;
+  creadoEn: string;
+};
 
 export function ChatPanel({ miUsuarioId }: { miUsuarioId: string }) {
   const [conversaciones, setConversaciones] = useState<Conversacion[]>([]);
   const [activa, setActiva] = useState<Conversacion | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [texto, setTexto] = useState("");
+  const [enviandoArchivo, setEnviandoArchivo] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const cargarConversaciones = useCallback(async () => {
     const res = await fetch("/api/mensajes");
@@ -60,6 +69,18 @@ export function ChatPanel({ miUsuarioId }: { miUsuarioId: string }) {
     cargarHilo(activa.usuarioId);
   }
 
+  async function enviarArchivo(file: File) {
+    if (!activa) return;
+    setEnviandoArchivo(true);
+    const fd = new FormData();
+    fd.append("receptorId", activa.usuarioId);
+    fd.append("contenido", "");
+    fd.append("file", file);
+    await fetch("/api/mensajes", { method: "POST", body: fd });
+    await cargarHilo(activa.usuarioId);
+    setEnviandoArchivo(false);
+  }
+
   return (
     <div className="grid grid-cols-1 gap-0 overflow-hidden rounded-2xl border border-white/[0.08] md:grid-cols-[280px_1fr]" style={{ height: "70vh" }}>
       <div className="overflow-y-auto border-r border-white/[0.08] bg-white/[0.02]">
@@ -96,17 +117,49 @@ export function ChatPanel({ miUsuarioId }: { miUsuarioId: string }) {
                 return (
                   <div key={m.id} className={`flex ${esMio ? "justify-end" : "justify-start"}`}>
                     <div
-                      className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
+                      className={`max-w-[75%] overflow-hidden rounded-2xl text-sm ${
                         esMio ? "bg-brand-red text-white" : "bg-white/[0.06] text-gray-200"
                       }`}
                     >
-                      {m.contenido}
+                      {m.archivoUrl && m.archivoTipo === "IMAGEN" && (
+                        <a href={m.archivoUrl} target="_blank" rel="noopener noreferrer">
+                          <img src={m.archivoUrl} alt="Evidencia enviada" className="max-h-64 w-full object-cover" />
+                        </a>
+                      )}
+                      {m.archivoUrl && m.archivoTipo === "PDF" && (
+                        <a
+                          href={m.archivoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-3.5 py-2.5 underline"
+                        >
+                          <FileText className="h-4 w-4 shrink-0" /> Ver documento PDF
+                        </a>
+                      )}
+                      {m.contenido && !(m.archivoTipo === "IMAGEN" && m.contenido === "📷 Foto") && (
+                        <p className="px-3.5 py-2">{m.contenido}</p>
+                      )}
                     </div>
                   </div>
                 );
               })}
+              {enviandoArchivo && <p className="text-center text-xs text-gray-500">Enviando archivo...</p>}
             </div>
             <div className="flex items-center gap-2 border-t border-white/[0.08] p-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) enviarArchivo(file);
+                  e.target.value = "";
+                }}
+              />
+              <Button variant="ghost" size="icon" onClick={() => fileInputRef.current?.click()} title="Enviar evidencia">
+                <Paperclip className="h-4 w-4" />
+              </Button>
               <input
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}

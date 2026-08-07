@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession, SESSION_COOKIE } from "@/lib/auth";
 
 // Rutas públicas que no requieren sesión
-const PUBLIC_PATHS = ["/", "/login", "/recuperar-password"];
+const PUBLIC_PATHS = ["/", "/login", "/recuperar-password", "/registro"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

@@ -88,6 +88,30 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     if (body.estado === "COMPLETADO" && asignacion.estado !== "COMPLETADO") {
       const ent = await prisma.entrenamiento.findUnique({ where: { id: params.id } });
+      const estadisticaActual = await prisma.estadistica.findUnique({ where: { atletaId: session.atletaId! } });
+
+      // Cálculo de racha: días consecutivos con al menos un entrenamiento completado.
+      // Se compara por día calendario (sin horas) contra la última actividad registrada.
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      let rachaActual = estadisticaActual?.rachaActual ?? 0;
+      const ultima = estadisticaActual?.ultimaActividad ? new Date(estadisticaActual.ultimaActividad) : null;
+      if (ultima) ultima.setHours(0, 0, 0, 0);
+
+      if (!ultima) {
+        rachaActual = 1;
+      } else {
+        const diffDias = Math.round((hoy.getTime() - ultima.getTime()) / 86400000);
+        if (diffDias === 0) {
+          // Ya había actividad hoy, la racha no cambia
+        } else if (diffDias === 1) {
+          rachaActual += 1;
+        } else {
+          rachaActual = 1; // se rompió la racha
+        }
+      }
+      const rachaMaxima = Math.max(rachaActual, estadisticaActual?.rachaMaxima ?? 0);
+
       await prisma.$transaction([
         prisma.estadistica.update({
           where: { atletaId: session.atletaId! },
@@ -95,6 +119,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             entrenamientosRealizados: { increment: 1 },
             kilometrosAcumulados: { increment: ent?.distanciaKm ?? 0 },
             horasEntrenadas: { increment: (ent?.duracionMin ?? 0) / 60 },
+            rachaActual,
+            rachaMaxima,
+            ultimaActividad: new Date(),
           },
         }),
         prisma.progreso.create({

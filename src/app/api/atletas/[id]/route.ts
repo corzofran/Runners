@@ -37,15 +37,35 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json().catch(() => null);
 
-  // Acciones rápidas de estado (suspender / reactivar)
-  if (body?.accion === "suspender" || body?.accion === "reactivar") {
+  // Acciones rápidas de estado (suspender / reactivar / aprobar / rechazar)
+  if (["suspender", "reactivar", "aprobar", "rechazar"].includes(body?.accion)) {
     const atleta = await prisma.atleta.findUnique({ where: { id: params.id } });
     if (!atleta) return NextResponse.json({ error: "Atleta no encontrado" }, { status: 404 });
 
-    await prisma.usuario.update({
-      where: { id: atleta.usuarioId },
-      data: { estado: body.accion === "suspender" ? "SUSPENDIDO" : "ACTIVO" },
-    });
+    const nuevoEstado = {
+      suspender: "SUSPENDIDO",
+      reactivar: "ACTIVO",
+      aprobar: "ACTIVO",
+      rechazar: "RECHAZADO",
+    }[body.accion as "suspender" | "reactivar" | "aprobar" | "rechazar"] as
+      | "SUSPENDIDO"
+      | "ACTIVO"
+      | "RECHAZADO";
+
+    await prisma.usuario.update({ where: { id: atleta.usuarioId }, data: { estado: nuevoEstado } });
+
+    if (body.accion === "aprobar") {
+      await prisma.notificacion.create({
+        data: {
+          usuarioId: atleta.usuarioId,
+          tipo: "SISTEMA",
+          titulo: "¡Tu cuenta fue aprobada!",
+          mensaje: "Ya puedes iniciar sesión y ver tus entrenamientos.",
+          enlace: "/atleta/dashboard",
+        },
+      });
+    }
+
     return NextResponse.json({ ok: true });
   }
 

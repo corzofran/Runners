@@ -43,6 +43,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  if (usuario.estado === "PENDIENTE") {
+    return NextResponse.json(
+      { error: "Tu registro está pendiente de aprobación por tu entrenador. Te avisaremos cuando esté listo." },
+      { status: 403 }
+    );
+  }
+
+  if (usuario.estado === "RECHAZADO") {
+    return NextResponse.json(
+      { error: "Tu solicitud de registro no fue aprobada. Contacta a tu entrenador para más información." },
+      { status: 403 }
+    );
+  }
+
   const passwordOk = await verifyPassword(password, usuario.passwordHash);
   if (!passwordOk) return credencialesInvalidas();
 

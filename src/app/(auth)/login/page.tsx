@@ -115,7 +115,10 @@ function LoginForm() {
         </form>
 
         <p className="mt-6 text-center text-xs text-gray-600">
-          El acceso es exclusivo. Si no tienes cuenta, contacta a tu entrenador.
+          ¿Eres nuevo en el equipo?{" "}
+          <Link href="/registro" className="font-medium text-brand-red-light hover:underline">
+            Regístrate aquí
+          </Link>
         </p>
       </div>
     </div>

@@ -1,60 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/session";
-import { crearAtletaSchema } from "@/lib/validations";
 import { hashPassword } from "@/lib/auth";
+import { crearAtletaSchema } from "@/lib/validations";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-export async function GET(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  const q = req.nextUrl.searchParams.get("q")?.trim();
-  const nivel = req.nextUrl.searchParams.get("nivel");
-  const soloPendientes = req.nextUrl.searchParams.get("pendientes") === "1";
-
-  const atletas = await prisma.atleta.findMany({
-    where: {
-      AND: [
-        q
-          ? {
-              OR: [
-                { nombre: { contains: q, mode: "insensitive" } },
-                { apellidos: { contains: q, mode: "insensitive" } },
-                { ciudad: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {},
-        nivel ? { nivel: nivel as any } : {},
-        soloPendientes ? { usuario: { estado: "PENDIENTE" } } : { usuario: { estado: { not: "PENDIENTE" } } },
-      ],
-    },
-    include: {
-      usuario: { select: { username: true, correo: true, estado: true, ultimaConexion: true } },
-      estadisticas: true,
-    },
-    orderBy: { creadoEn: "desc" },
-  });
-
-  return NextResponse.json({ atletas });
-}
-
+// Registro público abierto: cualquiera con el link puede enviar su solicitud,
+// pero el usuario queda en estado PENDIENTE hasta que un administrador lo apruebe.
+// No puede iniciar sesión hasta la aprobación (ver /api/auth/login).
 export async function POST(req: NextRequest) {
-  try {
-    await requireAdmin();
-  } catch {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const ip = req.headers.get("x-forwarded-for") ?? "local";
+  const rate = checkRateLimit(`registro:${ip}`, 5, 60_000);
+  if (!rate.allowed) {
+    return NextResponse.json({ error: "Demasiados intentos. Intenta de nuevo en un minuto." }, { status: 429 });
   }
 
   const body = await req.json().catch(() => null);
   const parsed = crearAtletaSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Datos inválidos", details: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Datos inválidos", details: parsed.error.flatten() }, { status: 400 });
   }
   const data = parsed.data;
 
@@ -65,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const rolAtleta = await prisma.rol.findUnique({ where: { nombre: "ATLETA" } });
   if (!rolAtleta) {
-    return NextResponse.json({ error: "Rol ATLETA no configurado. Corre el seed." }, { status: 500 });
+    return NextResponse.json({ error: "El sistema aún no está listo para registros. Intenta más tarde." }, { status: 500 });
   }
 
   const passwordHash = await hashPassword(data.password);
@@ -77,6 +40,7 @@ export async function POST(req: NextRequest) {
         correo: data.correo || null,
         passwordHash,
         rolId: rolAtleta.id,
+        estado: "PENDIENTE",
       },
     });
 
@@ -105,5 +69,17 @@ export async function POST(req: NextRequest) {
     return nuevoAtleta;
   });
 
-  return NextResponse.json({ atleta }, { status: 201 });
+  // Notifica a TODOS los administradores (normalmente uno, pero soporta varios)
+  const admins = await prisma.usuario.findMany({ where: { rol: { nombre: "ADMINISTRADOR" } } });
+  await prisma.notificacion.createMany({
+    data: admins.map((admin) => ({
+      usuarioId: admin.id,
+      tipo: "SISTEMA" as const,
+      titulo: "Nueva solicitud de registro",
+      mensaje: `${data.nombre} ${data.apellidos} quiere unirse al equipo`,
+      enlace: "/admin/atletas?filtro=pendientes",
+    })),
+  });
+
+  return NextResponse.json({ ok: true, atletaId: atleta.id }, { status: 201 });
 }
